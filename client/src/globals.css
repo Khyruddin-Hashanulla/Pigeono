@@ -1,0 +1,103 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Fraunces', 'Noto Sans Devanagari', 'Noto Sans Bengali', ui-serif, Georgia, serif;
+
+  /* Warm, earthy, trustworthy palette: deep brown-black, cream, terracotta accent */
+  --color-background: #faf7f2;
+  --color-foreground: #1c1917;
+  --color-card: #ffffff;
+  --color-card-foreground: #1c1917;
+  --color-primary: #9a3f1d;
+  --color-primary-foreground: #faf7f2;
+  --color-secondary: #efe9df;
+  --color-secondary-foreground: #44403c;
+  --color-muted: #f1ece3;
+  --color-muted-foreground: #78716c;
+  --color-accent: #2f5233;
+  --color-accent-foreground: #faf7f2;
+  --color-border: #e4ddd0;
+  --color-ring: #9a3f1d;
+  --color-destructive: #b91c1c;
+  --color-destructive-foreground: #faf7f2;
+
+  --radius: 0.5rem;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Credit tag: slide-in entrance, slide-out exit, gentle idle float, pulsing glow */
+@keyframes credit-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(2rem) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes credit-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(2rem) scale(0.95);
+  }
+}
+
+@keyframes credit-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes credit-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+.credit-tag-in {
+  animation: credit-slide-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.credit-tag-out {
+  animation: credit-slide-out 0.3s ease-in both;
+}
+
+.credit-tag-float {
+  animation: credit-float 4s ease-in-out 0.6s infinite;
+}
+
+.credit-tag-glow {
+  animation: credit-glow 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .credit-tag-in,
+  .credit-tag-out,
+  .credit-tag-float,
+  .credit-tag-glow {
+    animation: none;
+  }
+}
