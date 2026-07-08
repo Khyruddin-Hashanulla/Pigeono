@@ -1,6 +1,12 @@
 packages:
   - server
   - client
+allowBuilds:
+  core-js: true
+  esbuild: true
+  mongodb-memory-server: true
+minimumReleaseAgeExclude:
+  - mongodb@7.5.0
 onlyBuiltDependencies:
   - esbuild
   - mongodb-memory-server
