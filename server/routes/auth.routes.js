@@ -5,7 +5,7 @@ import { OAuth2Client } from 'google-auth-library'
 import User from '../models/User.js'
 import VendorProfile from '../models/VendorProfile.js'
 import OtpCode from '../models/OtpCode.js'
-import { sendOtpEmail, sendWelcomeEmail, isEmailDevMode } from '../services/email.js'
+import { sendOtpEmail, sendWelcomeEmail, isEmailDevMode, isEmailConfigured } from '../services/email.js'
 import { validate } from '../middleware/validate.js'
 import { ApiError } from '../middleware/error.js'
 import {
@@ -16,6 +16,22 @@ import {
 } from '../middleware/auth.js'
 
 const router = Router()
+
+/**
+ * Send an OTP email and FAIL LOUDLY if it can't be delivered.
+ * Previously send failures were silently swallowed: in production without
+ * working SMTP the user saw "OTP sent to email" but nothing ever arrived.
+ */
+async function sendOtpEmailOrThrow(email, code) {
+  if (process.env.NODE_ENV === 'production' && !isEmailConfigured()) {
+    console.error('[pigeono] OTP email requested but SMTP is not configured')
+    throw new ApiError(503, 'Email service is not configured. Please contact support or sign in with Google.')
+  }
+  const result = await sendOtpEmail(email, code)
+  if (!result.ok) {
+    throw new ApiError(502, 'We could not send the verification email. Please try again in a moment.')
+  }
+}
 
 router.post(
   '/register',
@@ -43,7 +59,7 @@ router.post(
       user.emailOtpSentAt = new Date()
       await user.save()
       const code = await OtpCode.issue(email, 'email_verify')
-      await sendOtpEmail(email, code)
+      await sendOtpEmailOrThrow(email, code)
       // User is NOT logged in until the email is verified
       res.status(201).json({
         success: true,
@@ -82,7 +98,7 @@ router.post(
           const code = await OtpCode.issue(user.email, 'email_verify')
           user.emailOtpSentAt = new Date()
           await user.save()
-          await sendOtpEmail(user.email, code)
+          await sendOtpEmailOrThrow(user.email, code)
           return res.status(403).json({
             success: false,
             message: 'Email not verified. A new OTP has been sent.',
@@ -151,7 +167,7 @@ router.post(
       const code = await OtpCode.issue(email, 'email_verify')
       user.emailOtpSentAt = new Date()
       await user.save()
-      await sendOtpEmail(email, code)
+      await sendOtpEmailOrThrow(email, code)
       res.json({
         success: true,
         message: 'A new OTP has been sent to your email',
@@ -282,6 +298,11 @@ router.post(
   validate([body('email').isEmail().normalizeEmail()]),
   async (req, res, next) => {
     try {
+      // Config-based check (not account-based) — safe from email enumeration
+      if (process.env.NODE_ENV === 'production' && !isEmailConfigured()) {
+        console.error('[pigeono] Password reset requested but SMTP is not configured')
+        throw new ApiError(503, 'Email service is not configured. Please contact support.')
+      }
       const user = await User.findOne({ email: req.body.email })
       let devResetUrl
       if (user) {

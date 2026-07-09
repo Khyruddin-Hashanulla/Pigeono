@@ -25,18 +25,14 @@ import { errorHandler, notFound } from './middleware/error.js'
 const app = express()
 
 app.set('trust proxy', 1)
-// app.use(helmet())
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
-      frameSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
-      connectSrc: ["'self'", "https://accounts.google.com"],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-}))
+app.use(
+  helmet({
+    // The frontend is deployed on a different origin (Vercel) than this API
+    // (Render). Helmet's default CORP of `same-origin` would block the
+    // browser from loading /uploads images on the frontend domain.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+)
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
   .split(',')

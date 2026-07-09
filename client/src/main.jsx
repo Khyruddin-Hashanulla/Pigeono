@@ -1,26 +1,25 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
-import { GoogleOAuthProvider } from "@react-oauth/google";
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
+import { AuthProvider } from './context/AuthContext'
+import { GoogleAuthProvider } from './components/AuthMethods'
+import { LanguageProvider } from './lib/i18n'
+import App from './App'
+import './globals.css'
 
-import { AuthProvider } from "./context/AuthContext";
-import { LanguageProvider } from "./lib/i18n";
-import App from "./App";
-import "./globals.css";
-
-createRoot(document.getElementById("root")).render(
+createRoot(document.getElementById('root')).render(
   <StrictMode>
     <HelmetProvider>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-        <BrowserRouter>
-          <LanguageProvider>
-            <AuthProvider>
+      <BrowserRouter>
+        <LanguageProvider>
+          <AuthProvider>
+            <GoogleAuthProvider>
               <App />
-            </AuthProvider>
-          </LanguageProvider>
-        </BrowserRouter>
-      </GoogleOAuthProvider>
+            </GoogleAuthProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </BrowserRouter>
     </HelmetProvider>
-  </StrictMode>,
-);
+  </StrictMode>
+)

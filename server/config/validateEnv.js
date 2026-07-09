@@ -29,11 +29,21 @@ export function validateEnv() {
   }
   if (!process.env.CLIENT_ORIGIN) {
     fatal.push('CLIENT_ORIGIN must be set to your site URL(s), e.g. https://pigeono.com — otherwise browsers cannot call the API.')
+  } else if (/localhost|127\.0\.0\.1/.test(process.env.CLIENT_ORIGIN)) {
+    fatal.push(
+      'CLIENT_ORIGIN still points to localhost — password reset links in emails would send users to http://localhost:3000. ' +
+        'Set it to your deployed frontend URL, e.g. https://your-app.vercel.app'
+    )
   }
 
   // --- Feature-degrading: boot, but warn loudly --------------------------
   if (!process.env.SMTP_HOST) {
     warnings.push('SMTP is not configured — email OTP, receipts and notifications will NOT be delivered. Registration by email will not work.')
+  } else if (/gmail/i.test(process.env.SMTP_HOST)) {
+    warnings.push(
+      'SMTP_HOST is Gmail — Google blocks SMTP from cloud data center IPs (Render, etc), causing connection timeouts. ' +
+        'Use a transactional provider like Brevo (smtp-relay.brevo.com) instead.'
+    )
   }
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     warnings.push('Razorpay keys are not set — vendor subscription checkout is DISABLED (simulated payments are blocked in production).')
