@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, unique: true, sparse: true, index: true },
     authProviders: {
       type: [String],
-      enum: ['password', 'phone', 'google'],
+      enum: ['password', 'google'],
       default: ['password'],
     },
     roles: {

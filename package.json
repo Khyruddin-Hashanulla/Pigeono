@@ -4,15 +4,11 @@
   "private": true,
   "description": "Pigeono - Multivendor Pigeon Marketplace (MERN)",
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,green \"pnpm --dir server dev\" \"pnpm --dir client dev\"",
-    "seed": "pnpm --dir server seed",
-    "build": "pnpm --dir client build"
-  },
-  "engines": {
-    "node": ">=22"
+    "dev": "concurrently -n server,client -c blue,green \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "seed": "npm --prefix server run seed",
+    "build": "npm --prefix client run build"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
-  },
-  "packageManager": "pnpm@9.15.9"
+    "concurrently": "^9.2.3"
+  }
 }

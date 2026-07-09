@@ -45,9 +45,13 @@ const router = Router()
 router.post('/', requireAuth, requireRoles('vendor'), upload.array('photos', 5), (req, res, next) => {
   try {
     if (!req.files?.length) throw new ApiError(400, 'No files uploaded')
-    // Cloudinary provides an absolute URL in f.path; local disk uses /uploads/<filename>
+    // Cloudinary provides an absolute URL in f.path. Local disk must ALSO
+    // return an absolute URL (API origin) so images work on split deploys
+    // where the frontend is on a different domain (e.g. Vercel + Render).
+    // req.protocol honors X-Forwarded-Proto because trust proxy is set.
+    const apiOrigin = `${req.protocol}://${req.get('host')}`
     const urls = req.files.map((f) =>
-      isCloudinaryConfigured() ? f.path : `/uploads/${f.filename}`
+      isCloudinaryConfigured() ? f.path : `${apiOrigin}/uploads/${f.filename}`
     )
     res.status(201).json({ success: true, data: { urls } })
   } catch (err) {

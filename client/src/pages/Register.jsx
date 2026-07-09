@@ -1,14 +1,12 @@
 import { useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Smartphone } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMessage } from '../lib/api'
-import { PhoneOtpForm, GoogleSignInButton, EmailOtpVerify } from '../components/AuthMethods'
+import { GoogleSignInButton, EmailOtpVerify } from '../components/AuthMethods'
 
 export default function Register() {
-  const { register, verifyEmail, resendOtp, loginWithOtp, loginWithGoogle } = useAuth()
+  const { register, verifyEmail, resendOtp, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
-  const [method, setMethod] = useState('email') // email | phone
   const [step, setStep] = useState('form') // form | verify
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -66,45 +64,6 @@ export default function Register() {
         Join Pigeono to buy verified-pedigree birds or open your own loft store.
       </p>
 
-      {/* Method tabs */}
-      <div className="mt-6 grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1" role="tablist" aria-label="Sign up method">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === 'email'}
-          onClick={() => {
-            setMethod('email')
-            setError('')
-          }}
-          className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            method === 'email' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Mail className="size-4" aria-hidden="true" />
-          Email
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === 'phone'}
-          onClick={() => {
-            setMethod('phone')
-            setError('')
-          }}
-          className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            method === 'phone' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Smartphone className="size-4" aria-hidden="true" />
-          Phone
-        </button>
-      </div>
-
-      {method === 'phone' ? (
-        <div className="mt-6">
-          <PhoneOtpForm loginWithOtp={loginWithOtp} onSuccess={goHome} />
-        </div>
-      ) : (
       <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
         {error && (
           <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -164,7 +123,6 @@ export default function Register() {
           {submitting ? 'Creating account...' : 'Sign up'}
         </button>
       </form>
-      )}
 
       <div className="mt-6">
         <GoogleSignInButton loginWithGoogle={loginWithGoogle} onSuccess={goHome} onError={setError} />

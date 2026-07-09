@@ -63,6 +63,10 @@ function ProfileForm() {
 }
 
 function PasswordForm() {
+  const { user, refresh } = useAuth()
+  // Google accounts have no password yet — they SET one (no current
+  // password needed) instead of changing an existing one.
+  const hasPassword = user?.authProviders?.includes('password')
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -78,11 +82,20 @@ function PasswordForm() {
     setBusy(true)
     setMsg(null)
     try {
-      await api.post('/users/change-password', { currentPassword: current, newPassword: next })
-      setMsg({ ok: true, text: 'Password updated.' })
+      await api.post('/users/change-password', {
+        ...(hasPassword ? { currentPassword: current } : {}),
+        newPassword: next,
+      })
+      setMsg({
+        ok: true,
+        text: hasPassword
+          ? 'Password updated.'
+          : 'Password set. You can now also log in with your email and password.',
+      })
       setCurrent('')
       setNext('')
       setConfirm('')
+      if (!hasPassword) await refresh() // authProviders now includes 'password'
     } catch (err) {
       setMsg({ ok: false, text: apiErrorMessage(err) })
     } finally {
@@ -94,13 +107,20 @@ function PasswordForm() {
     <form onSubmit={submit} className="rounded-lg border border-border bg-card p-5">
       <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
         <KeyRound className="size-5 text-primary" aria-hidden="true" />
-        Change password
+        {hasPassword ? 'Change password' : 'Set a password'}
       </h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div>
-          <label htmlFor="pw-current" className="mb-1.5 block text-sm font-medium">Current password</label>
-          <input id="pw-current" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputCls} />
-        </div>
+      {!hasPassword && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          You signed in with Google. Set a password to also log in with your email.
+        </p>
+      )}
+      <div className={`mt-4 grid gap-4 ${hasPassword ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+        {hasPassword && (
+          <div>
+            <label htmlFor="pw-current" className="mb-1.5 block text-sm font-medium">Current password</label>
+            <input id="pw-current" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={inputCls} />
+          </div>
+        )}
         <div>
           <label htmlFor="pw-new" className="mb-1.5 block text-sm font-medium">New password</label>
           <input id="pw-new" type="password" required minLength={8} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputCls} />
@@ -116,7 +136,7 @@ function PasswordForm() {
         </p>
       )}
       <button type="submit" disabled={busy} className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
-        {busy ? 'Updating...' : 'Update password'}
+        {busy ? 'Saving...' : hasPassword ? 'Update password' : 'Set password'}
       </button>
     </form>
   )

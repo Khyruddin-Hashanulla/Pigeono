@@ -1,15 +1,13 @@
 import { useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Mail, Smartphone } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { apiErrorMessage } from '../lib/api'
-import { PhoneOtpForm, GoogleSignInButton, EmailOtpVerify } from '../components/AuthMethods'
+import { GoogleSignInButton, EmailOtpVerify } from '../components/AuthMethods'
 
 export default function Login() {
-  const { login, verifyEmail, resendOtp, loginWithOtp, loginWithGoogle } = useAuth()
+  const { login, verifyEmail, resendOtp, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [method, setMethod] = useState('email') // email | phone
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [needsVerification, setNeedsVerification] = useState(false)
@@ -89,92 +87,54 @@ export default function Login() {
         </p>
       )}
 
-      {/* Method tabs */}
-      <div className="mt-6 grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1" role="tablist" aria-label="Login method">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === 'email'}
-          onClick={() => {
-            setMethod('email')
-            setError('')
-          }}
-          className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            method === 'email' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Mail className="size-4" aria-hidden="true" />
-          Email
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={method === 'phone'}
-          onClick={() => {
-            setMethod('phone')
-            setError('')
-          }}
-          className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-            method === 'phone' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Smartphone className="size-4" aria-hidden="true" />
-          Phone
-        </button>
-      </div>
-
       <div className="mt-6">
-        {method === 'email' ? (
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            {error && (
-              <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
-                Email
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+          {error && (
+            <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <div>
+            <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label htmlFor="password" className="block text-sm font-medium">
+                Password
               </label>
-              <input
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
+              <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
             </div>
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium">
-                  Password
-                </label>
-                <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-2 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-            >
-              {submitting ? 'Logging in...' : 'Log in'}
-            </button>
-          </form>
-        ) : (
-          <PhoneOtpForm loginWithOtp={loginWithOtp} onSuccess={redirectAfterLogin} />
-        )}
+            <input
+              id="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="mt-2 rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {submitting ? 'Logging in...' : 'Log in'}
+          </button>
+        </form>
       </div>
 
       <div className="mt-6">
@@ -200,7 +160,6 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => {
-                  setMethod('email')
                   setEmail(acc.email)
                   setPassword(acc.password)
                   setError('')

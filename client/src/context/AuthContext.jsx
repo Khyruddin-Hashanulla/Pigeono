@@ -58,14 +58,6 @@ export function AuthProvider({ children }) {
     return data.data // { devOtp? }
   }
 
-  /** Complete phone OTP login/signup (name only needed for new accounts) */
-  const loginWithOtp = async (phone, code, name) => {
-    const { data } = await api.post('/auth/otp/verify', { phone, code, ...(name ? { name } : {}) })
-    setUser(data.data)
-    await refresh()
-    return data.data
-  }
-
   /** Complete Google sign-in with a Google Identity Services credential */
   const loginWithGoogle = async (credential) => {
     const { data } = await api.post('/auth/google', { credential })
@@ -85,7 +77,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, verifyEmail, resendOtp, loginWithOtp, loginWithGoogle, logout, refresh, isVendor, isAdmin }}
+      value={{ user, loading, login, register, verifyEmail, resendOtp, loginWithGoogle, logout, refresh, isVendor, isAdmin }}
     >
       {children}
     </AuthContext.Provider>

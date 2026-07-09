@@ -1,9 +1,15 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
+/**
+ * Backend base URL.
+ * - Same-origin deploys (VPS + Nginx, or dev with Vite proxy): leave unset.
+ * - Split deploys (frontend on Vercel, backend on Render): set VITE_API_URL
+ *   to the backend origin, e.g. https://pigeono-api.onrender.com
+ */
+export const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: `${API_ORIGIN}/api/v1`,
   withCredentials: true,
 })
 

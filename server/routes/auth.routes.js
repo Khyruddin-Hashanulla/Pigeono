@@ -5,7 +5,6 @@ import { OAuth2Client } from 'google-auth-library'
 import User from '../models/User.js'
 import VendorProfile from '../models/VendorProfile.js'
 import OtpCode from '../models/OtpCode.js'
-import { sendOtpSms, isSmsDevMode } from '../services/sms.js'
 import { sendOtpEmail, sendWelcomeEmail, isEmailDevMode } from '../services/email.js'
 import { validate } from '../middleware/validate.js'
 import { ApiError } from '../middleware/error.js'
@@ -164,74 +163,21 @@ router.post(
   }
 )
 
-/** Indian mobile number: 10 digits starting 6-9 */
-const PHONE_RE = /^[6-9]\d{9}$/
-
-/** POST /auth/otp/request — send a login OTP to a phone number */
-router.post(
-  '/otp/request',
-  validate([
-    body('phone').trim().matches(PHONE_RE).withMessage('Enter a valid 10-digit Indian mobile number'),
-  ]),
-  async (req, res, next) => {
-    try {
-      const { phone } = req.body
-      const existing = await User.findOne({ phone })
-      if (existing?.isSuspended) throw new ApiError(403, 'Account suspended')
-      const code = await OtpCode.issue(phone)
-      await sendOtpSms(phone, code)
-      res.json({
-        success: true,
-        message: 'OTP sent',
-        data: {
-          isNewUser: !existing,
-          // Dev mode only: surface the code so the flow is testable without SMS
-          ...(isSmsDevMode() ? { devOtp: code } : {}),
-        },
-      })
-    } catch (err) {
-      next(err)
-    }
+/**
+ * Normalize an email exactly like express-validator's normalizeEmail() does on
+ * the register/login routes (Gmail: strip dots and +suffix, googlemail → gmail).
+ * Without this, "john.doe@gmail.com" from Google would not match the
+ * "johndoe@gmail.com" stored at manual registration — creating a DUPLICATE account.
+ */
+function normalizeGoogleEmail(raw) {
+  let [local, domain] = String(raw).trim().toLowerCase().split('@')
+  if (!domain) return String(raw).trim().toLowerCase()
+  if (domain === 'googlemail.com') domain = 'gmail.com'
+  if (domain === 'gmail.com') {
+    local = local.split('+')[0].replace(/\./g, '')
   }
-)
-
-/** POST /auth/otp/verify — verify OTP; logs in or creates the account */
-router.post(
-  '/otp/verify',
-  validate([
-    body('phone').trim().matches(PHONE_RE).withMessage('Enter a valid 10-digit Indian mobile number'),
-    body('code').trim().isLength({ min: 6, max: 6 }).isNumeric().withMessage('Enter the 6-digit code'),
-    body('name').optional().trim().isLength({ min: 2, max: 100 }),
-  ]),
-  async (req, res, next) => {
-    try {
-      const { phone, code, name } = req.body
-      const result = await OtpCode.verify(phone, code)
-      if (!result.ok) throw new ApiError(401, result.reason)
-
-      let user = await User.findOne({ phone })
-      if (!user) {
-        if (!name) throw new ApiError(422, 'Name is required to create your account')
-        user = await User.create({
-          name,
-          phone,
-          isVerified: true,
-          authProviders: ['phone'],
-        })
-      } else {
-        if (user.isSuspended) throw new ApiError(403, 'Account suspended')
-        if (!user.authProviders.includes('phone')) {
-          user.authProviders.push('phone')
-          await user.save()
-        }
-      }
-      setAuthCookies(req, res, user)
-      res.json({ success: true, data: user.toSafeJSON() })
-    } catch (err) {
-      next(err)
-    }
-  }
-)
+  return `${local}@${domain}`
+}
 
 /** GET /auth/google/config — tells the client whether Google sign-in is available */
 router.get('/google/config', (req, res) => {
@@ -258,11 +204,12 @@ router.post(
       }
       if (!payload?.sub || !payload?.email) throw new ApiError(401, 'Google account missing required info')
 
-      let user = await User.findOne({ $or: [{ googleId: payload.sub }, { email: payload.email }] })
+      const email = normalizeGoogleEmail(payload.email)
+      let user = await User.findOne({ $or: [{ googleId: payload.sub }, { email }] })
       if (!user) {
         user = await User.create({
-          name: payload.name || payload.email.split('@')[0],
-          email: payload.email,
+          name: payload.name || email.split('@')[0],
+          email,
           googleId: payload.sub,
           profileImage: payload.picture,
           isVerified: Boolean(payload.email_verified),
@@ -287,7 +234,7 @@ router.post(
           user.profileImage = payload.picture
           changed = true
         }
-        if (!user.emailVerified && payload.email_verified && user.email === payload.email) {
+        if (!user.emailVerified && payload.email_verified && user.email === email) {
           user.emailVerified = true
           user.isVerified = true
           changed = true

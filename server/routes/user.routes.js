@@ -212,11 +212,16 @@ router.patch(
   }
 )
 
-/** POST /api/v1/users/change-password */
+/**
+ * POST /api/v1/users/change-password
+ * Users who signed up via Google or phone OTP have no password yet — for them
+ * this SETS a first password (no current password needed) and enables email +
+ * password login. Users who already have one must provide the current password.
+ */
 router.post(
   '/change-password',
   validate([
-    body('currentPassword').notEmpty().withMessage('Current password is required'),
+    body('currentPassword').optional().isString(),
     body('newPassword')
       .isLength({ min: 8, max: 100 })
       .withMessage('New password must be at least 8 characters'),
@@ -224,11 +229,22 @@ router.post(
   async (req, res, next) => {
     try {
       const user = await User.findById(req.user._id).select('+password')
-      const ok = await user.comparePassword(req.body.currentPassword)
-      if (!ok) throw new ApiError(401, 'Current password is incorrect')
+      if (user.password) {
+        if (!req.body.currentPassword) throw new ApiError(422, 'Current password is required')
+        const ok = await user.comparePassword(req.body.currentPassword)
+        if (!ok) throw new ApiError(401, 'Current password is incorrect')
+      }
+      const isFirstPassword = !user.password
       user.password = req.body.newPassword
+      if (!user.authProviders.includes('password')) user.authProviders.push('password')
       await user.save()
-      res.json({ success: true, message: 'Password updated' })
+      res.json({
+        success: true,
+        message: isFirstPassword
+          ? 'Password set. You can now also log in with email and password.'
+          : 'Password updated',
+        data: user.toSafeJSON(),
+      })
     } catch (err) {
       next(err)
     }
