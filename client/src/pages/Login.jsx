@@ -148,7 +148,7 @@ export default function Login() {
         </Link>
       </p>
 
-      <div className="mt-8 rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
+      {/* <div className="mt-8 rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
         <p className="font-semibold text-foreground">Demo accounts (seeded) — click to fill</p>
         <ul className="mt-2 flex flex-col gap-1">
           {[
@@ -171,7 +171,7 @@ export default function Login() {
             </li>
           ))}
         </ul>
-      </div>
+      </div> */}
     </div>
   )
 }

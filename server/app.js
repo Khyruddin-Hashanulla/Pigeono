@@ -25,7 +25,18 @@ import { errorHandler, notFound } from './middleware/error.js'
 const app = express()
 
 app.set('trust proxy', 1)
-app.use(helmet())
+// app.use(helmet())
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
+      frameSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
+      connectSrc: ["'self'", "https://accounts.google.com"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}))
 
 const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
   .split(',')

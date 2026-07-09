@@ -88,10 +88,10 @@ export default function Home() {
           className="absolute inset-0 size-full object-cover object-[70%_center] md:object-right"
         />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/70 to-foreground/10"
+          className="absolute inset-0 bg-linear-to-r from-foreground via-foreground/70 to-foreground/10"
           aria-hidden="true"
         />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-foreground/80 to-transparent" aria-hidden="true" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-foreground/80 to-transparent" aria-hidden="true" />
         <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-24 md:py-36">
           <span className="inline-flex items-center gap-2 rounded-full border border-background/20 bg-background/10 px-4 py-1.5 text-xs font-semibold backdrop-blur-sm">
             <ShieldCheck className="size-3.5 text-accent-foreground" aria-hidden="true" />
@@ -161,7 +161,7 @@ export default function Home() {
                     className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div
-                    className="absolute inset-0 bg-gradient-to-t from-foreground/85 via-foreground/25 to-transparent"
+                    className="absolute inset-0 bg-linear-to-t from-foreground/85 via-foreground/25 to-transparent"
                     aria-hidden="true"
                   />
                   <span className="absolute left-4 top-4 flex size-10 items-center justify-center rounded-full bg-background/15 text-background backdrop-blur-sm">
