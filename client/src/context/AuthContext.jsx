@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { api, SESSION_EXPIRED_EVENT } from '../lib/api'
+import { api, SESSION_EXPIRED_EVENT, clearTokens } from '../lib/api'
 import { disconnectSocket } from '../lib/socket'
 
 const AuthContext = createContext(null)
@@ -68,6 +68,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await api.post('/auth/logout')
+    clearTokens() // drop the bearer-token fallback (mobile / split deploys)
     disconnectSocket() // drop the real-time connection tied to the old session
     setUser(null)
   }

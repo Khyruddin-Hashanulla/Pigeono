@@ -1,12 +1,15 @@
 import { io } from 'socket.io-client'
-import { API_ORIGIN } from './api'
+import { API_ORIGIN, getAccessToken } from './api'
 
 /**
  * Socket.io client singleton.
  * Connects to VITE_API_URL when set (split deploys: Vercel + Render),
  * otherwise same-origin (Vite proxies /socket.io to the API server in dev).
- * Auth uses the same httpOnly accessToken cookie as REST calls, sent
- * automatically with the handshake because withCredentials is true.
+ * Auth: the httpOnly accessToken cookie rides along via withCredentials,
+ * plus a bearer token in the handshake auth for browsers that block
+ * third-party cookies on split deploys (mobile Safari etc). The auth
+ * callback re-reads the token on every (re)connect so reconnects after a
+ * token refresh use the fresh token.
  */
 let socket = null
 
@@ -18,6 +21,7 @@ export function getSocket() {
       autoConnect: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
+      auth: (cb) => cb({ token: getAccessToken() }),
     })
   }
   return socket

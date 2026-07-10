@@ -5,9 +5,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js",
+    "dev": "node --watch index.js",
     "start": "node index.js",
-    "seed": "node src/seed/seed.js",
+    "seed": "node seed/seed.js",
     "test": "node --test --test-concurrency=1 \"test/*.test.js\""
   },
   "dependencies": {
@@ -28,7 +28,6 @@
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^9.0.3",
     "razorpay": "^2.9.6",
-    "resend": "^6.17.2",
     "slugify": "^1.6.6",
     "socket.io": "^4.8.3"
   },

@@ -162,9 +162,16 @@ export function GoogleAuthProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false
-    fetchGoogleConfig().then((id) => {
-      if (!cancelled && id) setClientId(id)
-    })
+    // Retry a few times: on Render's free tier the API cold-starts (~50s),
+    // and a single failed config fetch would hide the Google button forever.
+    const attempt = (retriesLeft) => {
+      fetchGoogleConfig().then((id) => {
+        if (cancelled) return
+        if (id) setClientId(id)
+        else if (retriesLeft > 0) setTimeout(() => attempt(retriesLeft - 1), 5000)
+      })
+    }
+    attempt(3)
     return () => {
       cancelled = true
     }

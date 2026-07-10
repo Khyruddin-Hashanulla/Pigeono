@@ -110,8 +110,8 @@ router.post(
           })
         }
       }
-      setAuthCookies(req, res, user)
-      res.json({ success: true, data: user.toSafeJSON() })
+      const tokens = setAuthCookies(req, res, user)
+      res.json({ success: true, data: user.toSafeJSON(), tokens })
     } catch (err) {
       next(err)
     }
@@ -139,8 +139,8 @@ router.post(
       user.isVerified = true
       await user.save()
       sendWelcomeEmail(user) // fire-and-forget
-      setAuthCookies(req, res, user)
-      res.json({ success: true, message: 'Email verified', data: user.toSafeJSON() })
+      const tokens = setAuthCookies(req, res, user)
+      res.json({ success: true, message: 'Email verified', data: user.toSafeJSON(), tokens })
     } catch (err) {
       next(err)
     }
@@ -257,8 +257,8 @@ router.post(
         }
         if (changed) await user.save()
       }
-      setAuthCookies(req, res, user)
-      res.json({ success: true, data: user.toSafeJSON() })
+      const tokens = setAuthCookies(req, res, user)
+      res.json({ success: true, data: user.toSafeJSON(), tokens })
     } catch (err) {
       next(err)
     }
@@ -267,16 +267,18 @@ router.post(
 
 router.post('/refresh', async (req, res, next) => {
   try {
-    const token = req.cookies?.refreshToken
-    if (!token) throw new ApiError(401, 'No refresh token')
+    // Cookie first; body fallback for browsers that block third-party
+    // cookies on split deploys (mobile Safari etc.)
+    const token = req.cookies?.refreshToken || req.body?.refreshToken
+    if (!token || typeof token !== 'string') throw new ApiError(401, 'No refresh token')
     const payload = verifyRefreshToken(token)
     const user = await User.findById(payload.sub)
     if (!user || user.isSuspended) {
       clearAuthCookies(req, res)
       throw new ApiError(401, 'Invalid refresh token')
     }
-    setAuthCookies(req, res, user)
-    res.json({ success: true, data: user.toSafeJSON() })
+    const tokens = setAuthCookies(req, res, user)
+    res.json({ success: true, data: user.toSafeJSON(), tokens })
   } catch (err) {
     next(err instanceof ApiError ? err : new ApiError(401, 'Invalid refresh token'))
   }

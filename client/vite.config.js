@@ -47,27 +47,27 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:6001',
+        target: 'http://localhost:5001',
         changeOrigin: true,
         // Forward X-Forwarded-* headers so Express can tell whether the
         // original request arrived over HTTPS (needed for correct cookie flags)
         xfwd: true,
       },
       '/uploads': {
-        target: 'http://localhost:6001',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:6001',
+        target: 'http://localhost:5001',
         changeOrigin: true,
         ws: true, // WebSocket upgrade for Socket.io
       },
       '/sitemap.xml': {
-        target: 'http://localhost:6001',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       },
       '/robots.txt': {
-        target: 'http://localhost:6001',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       },
     },

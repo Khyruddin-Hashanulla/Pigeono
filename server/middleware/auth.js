@@ -54,10 +54,31 @@ function cookieOptions(req) {
   }
 }
 
+/**
+ * Sets httpOnly auth cookies AND returns the token pair.
+ *
+ * Why both: on split deploys (frontend on Vercel, API on Render) the cookies
+ * are THIRD-PARTY cookies, which mobile Safari/iOS and other mobile browsers
+ * block entirely — login appears to succeed but the cookie is silently
+ * dropped, and the next request 401s (symptom: instant logout on mobile).
+ * The client stores the returned tokens and sends them via the
+ * Authorization header as a fallback that works on every browser.
+ */
 export function setAuthCookies(req, res, user) {
   const common = cookieOptions(req)
-  res.cookie('accessToken', signAccessToken(user), { ...common, maxAge: 15 * 60 * 1000 })
-  res.cookie('refreshToken', signRefreshToken(user), { ...common, maxAge: 7 * 24 * 60 * 60 * 1000 })
+  const accessToken = signAccessToken(user)
+  const refreshToken = signRefreshToken(user)
+  res.cookie('accessToken', accessToken, { ...common, maxAge: 15 * 60 * 1000 })
+  res.cookie('refreshToken', refreshToken, { ...common, maxAge: 7 * 24 * 60 * 60 * 1000 })
+  return { accessToken, refreshToken }
+}
+
+/** Access token from the httpOnly cookie OR the Authorization: Bearer header. */
+export function getAccessToken(req) {
+  if (req.cookies?.accessToken) return req.cookies.accessToken
+  const header = req.headers.authorization || ''
+  if (header.startsWith('Bearer ')) return header.slice(7)
+  return null
 }
 
 export function clearAuthCookies(req, res) {
@@ -69,7 +90,7 @@ export function clearAuthCookies(req, res) {
 /** Requires a valid access token; attaches req.user */
 export async function requireAuth(req, res, next) {
   try {
-    const token = req.cookies?.accessToken
+    const token = getAccessToken(req)
     if (!token) throw new ApiError(401, 'Not authenticated')
     const payload = jwt.verify(token, JWT_SECRET)
     const user = await User.findById(payload.sub)
@@ -91,7 +112,7 @@ export async function requireAuth(req, res, next) {
 /** Optional auth: attaches req.user if a valid token is present, otherwise continues */
 export async function optionalAuth(req, _res, next) {
   try {
-    const token = req.cookies?.accessToken
+    const token = getAccessToken(req)
     if (token) {
       const payload = jwt.verify(token, JWT_SECRET)
       req.user = await User.findById(payload.sub)
