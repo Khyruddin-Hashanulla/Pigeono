@@ -1,28 +1,63 @@
 import nodemailer from 'nodemailer'
 
-/**
- * Email service (Nodemailer). Uses SMTP_* env vars when configured;
- * otherwise runs in "dev mode": emails are logged to the console and
- * OTP codes are surfaced to the client for testability (mirrors sms.js).
- */
-
 let transporter = null
 
-export function isEmailConfigured() {
+function isBrevoApiConfigured() {
+  return Boolean(process.env.BREVO_API_KEY)
+}
+
+function isSmtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
 }
 
-/**
- * Dev mode surfaces OTP codes / reset links directly to the client for
- * testability. NEVER active in production — that would let anyone read
- * another user's OTP from the API response.
- */
+export function isEmailConfigured() {
+  return isBrevoApiConfigured() || isSmtpConfigured()
+}
+
+/** Parse EMAIL_FROM ('Name <addr@x.com>' or plain address) into API shape. */
+function parseFrom() {
+  const raw = process.env.EMAIL_FROM || 'Pigeono <no-reply@pigeono.com>'
+  const match = raw.match(/^\s*(.*?)\s*<\s*(.+?)\s*>\s*$/)
+  if (match) return { name: match[1] || 'Pigeono', email: match[2] }
+  return { name: 'Pigeono', email: raw.trim() }
+}
+
+/** Send via Brevo's HTTPS API — works even where SMTP ports are blocked. */
+async function sendViaBrevoApi({ to, subject, html }) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15_000)
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: parseFrom(),
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`Brevo API ${res.status}: ${body.slice(0, 200)}`)
+    }
+    return { ok: true }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export function isEmailDevMode() {
   return !isEmailConfigured() && process.env.NODE_ENV !== 'production'
 }
 
 function getTransporter() {
-  if (!isEmailConfigured()) return null
+  if (!isSmtpConfigured()) return null
   if (!transporter) {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -32,9 +67,6 @@ function getTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // Fail fast instead of hanging for minutes when the SMTP host is
-      // unreachable (e.g. Gmail blocks connections from cloud provider IPs —
-      // use a transactional provider like Brevo on Render/Vercel instead).
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
       socketTimeout: 15_000,
@@ -46,6 +78,10 @@ function getTransporter() {
 /** Base send. Never throws — email failure must not break the main flow. */
 export async function sendEmail({ to, subject, html }) {
   try {
+    // Prefer the HTTPS API: immune to SMTP port blocking on cloud hosts
+    if (isBrevoApiConfigured()) {
+      return await sendViaBrevoApi({ to, subject, html })
+    }
     const t = getTransporter()
     if (!t) {
       console.log(`[pigeono] (email dev mode) To: ${to} | Subject: ${subject}`)
@@ -60,10 +96,11 @@ export async function sendEmail({ to, subject, html }) {
     return { ok: true }
   } catch (err) {
     console.error('[pigeono] sendEmail failed:', err.message)
-    if (/timeout|ETIMEDOUT|ECONNREFUSED/i.test(err.message) && /gmail/i.test(process.env.SMTP_HOST || '')) {
+    if (/timeout|ETIMEDOUT|ECONNREFUSED|aborted/i.test(err.message) && !isBrevoApiConfigured()) {
       console.error(
-        '[pigeono] HINT: Gmail blocks SMTP from cloud data center IPs (Render, etc). ' +
-          'Switch to a transactional email provider — e.g. Brevo (smtp-relay.brevo.com:587, free tier).'
+        '[pigeono] HINT: Your host is likely blocking outbound SMTP ports — Render free tier blocks ' +
+          'ports 25/465/587 entirely (since Sept 2025), and Gmail blocks cloud IPs. ' +
+          'Set BREVO_API_KEY to send via Brevo\'s HTTPS API instead (not affected by port blocking).'
       )
     }
     return { ok: false, error: err.message }
