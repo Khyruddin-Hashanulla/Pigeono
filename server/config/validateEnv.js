@@ -1,11 +1,3 @@
-/**
- * Validates environment configuration at startup.
- *
- * In production (NODE_ENV=production) the process REFUSES to start when a
- * security-critical variable is missing, and prints loud warnings for
- * feature-degrading ones. In development everything falls back safely.
- */
-
 const isProd = () => process.env.NODE_ENV === 'production'
 
 export function validateEnv() {
@@ -37,12 +29,23 @@ export function validateEnv() {
   }
 
   // --- Feature-degrading: boot, but warn loudly --------------------------
-  if (!process.env.SMTP_HOST) {
-    warnings.push('SMTP is not configured — email OTP, receipts and notifications will NOT be delivered. Registration by email will not work.')
-  } else if (/gmail/i.test(process.env.SMTP_HOST)) {
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '')
+  if (brevoKey && !brevoKey.startsWith('xkeysib-')) {
     warnings.push(
-      'SMTP_HOST is Gmail — Google blocks SMTP from cloud data center IPs (Render, etc), causing connection timeouts. ' +
-        'Use a transactional provider like Brevo (smtp-relay.brevo.com) instead.'
+      `BREVO_API_KEY does not look like a Brevo API key (starts with "${brevoKey.slice(0, 8)}...", expected "xkeysib-"). ` +
+        'You may have pasted the SMTP key by mistake — in Brevo go to Settings → SMTP & API → the "API Keys" TAB ' +
+        '(not "SMTP") and generate an API key. Emails will fail with 401 "Key not found" until this is fixed.'
+    )
+  }
+  if (!process.env.BREVO_API_KEY && !process.env.SMTP_HOST) {
+    warnings.push(
+      'No email transport configured — email OTP, receipts and notifications will NOT be delivered. ' +
+        'Set BREVO_API_KEY (recommended) or SMTP_* variables. Registration by email will not work.'
+    )
+  } else if (!process.env.BREVO_API_KEY && process.env.SMTP_HOST) {
+    warnings.push(
+      'Email uses SMTP only — note that Render free tier blocks ALL outbound SMTP ports (25/465/587), ' +
+        'causing "Connection timeout". If deployed on Render free tier, set BREVO_API_KEY to send over HTTPS instead.'
     )
   }
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {

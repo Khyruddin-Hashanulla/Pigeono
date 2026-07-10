@@ -1,9 +1,15 @@
-import nodemailer from 'nodemailer'
-
 let transporter = null
 
+/**
+ * Brevo API key, cleaned of the most common copy/paste mistakes:
+ * surrounding quotes, whitespace/newlines from the dashboard textarea.
+ */
+function getBrevoApiKey() {
+  return (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '')
+}
+
 function isBrevoApiConfigured() {
-  return Boolean(process.env.BREVO_API_KEY)
+  return Boolean(getBrevoApiKey())
 }
 
 function isSmtpConfigured() {
@@ -30,7 +36,7 @@ async function sendViaBrevoApi({ to, subject, html }) {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'api-key': process.env.BREVO_API_KEY,
+        'api-key': getBrevoApiKey(),
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
@@ -52,6 +58,11 @@ async function sendViaBrevoApi({ to, subject, html }) {
   }
 }
 
+/**
+ * Dev mode surfaces OTP codes / reset links directly to the client for
+ * testability. NEVER active in production — that would let anyone read
+ * another user's OTP from the API response.
+ */
 export function isEmailDevMode() {
   return !isEmailConfigured() && process.env.NODE_ENV !== 'production'
 }
@@ -67,6 +78,9 @@ function getTransporter() {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Fail fast instead of hanging for minutes when the SMTP host is
+      // unreachable (e.g. Gmail blocks connections from cloud provider IPs —
+      // use a transactional provider like Brevo on Render/Vercel instead).
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
       socketTimeout: 15_000,
@@ -96,6 +110,16 @@ export async function sendEmail({ to, subject, html }) {
     return { ok: true }
   } catch (err) {
     console.error('[pigeono] sendEmail failed:', err.message)
+    if (/Brevo API 401/.test(err.message)) {
+      const key = getBrevoApiKey()
+      console.error(
+        '[pigeono] HINT: Brevo rejected the API key ("Key not found"). ' +
+          `Your key starts with "${key.slice(0, 8)}..." — a valid Brevo API key starts with "xkeysib-". ` +
+          'Common mistakes: (1) you pasted the SMTP key instead — go to Brevo → Settings → SMTP & API → ' +
+          'the "API Keys" TAB (not "SMTP") → Generate a new API key; (2) the key was truncated when pasting ' +
+          'into Render; (3) the key was deleted/regenerated in Brevo. Update BREVO_API_KEY on Render and redeploy.'
+      )
+    }
     if (/timeout|ETIMEDOUT|ECONNREFUSED|aborted/i.test(err.message) && !isBrevoApiConfigured()) {
       console.error(
         '[pigeono] HINT: Your host is likely blocking outbound SMTP ports — Render free tier blocks ' +
